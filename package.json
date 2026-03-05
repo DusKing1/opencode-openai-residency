@@ -1,0 +1,41 @@
+{
+  "name": "opencode-openai-residency",
+  "version": "1.0.0",
+  "description": "OpenCode plugin: adds x-openai-internal-codex-residency header for OpenAI Enterprise data residency support",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "license": "MIT",
+  "author": "DusKing1",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/DusKing1/opencode-openai-residency.git"
+  },
+  "homepage": "https://github.com/DusKing1/opencode-openai-residency#readme",
+  "bugs": {
+    "url": "https://github.com/DusKing1/opencode-openai-residency/issues"
+  },
+  "keywords": [
+    "opencode",
+    "openai",
+    "codex",
+    "residency",
+    "enterprise",
+    "plugin"
+  ],
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "prepublishOnly": "tsc"
+  },
+  "peerDependencies": {
+    "@opencode-ai/plugin": ">=1.0.0"
+  },
+  "devDependencies": {
+    "@opencode-ai/plugin": "^1.2.15",
+    "@opencode-ai/sdk": "^1.2.15",
+    "typescript": "^5.9.0"
+  }
+}
