@@ -18,8 +18,17 @@ jobs:
           node-version: 22
           registry-url: https://registry.npmjs.org
 
-      # OIDC trusted publishing requires npm >= 11.5.1; node 22 ships with npm 10.x
-      - run: npm install -g npm@latest
+      # OIDC trusted publishing requires npm >= 11.5.1; node 22 LTS ships with
+      # npm 10.x. Self-updating in place breaks (promise-retry MODULE_NOT_FOUND),
+      # so install into a temp prefix and prepend it to PATH.
+      - name: Upgrade npm to >= 11.5.1 (OIDC trusted publishing requirement)
+        run: |
+          mkdir -p "$RUNNER_TEMP/npm-upgrade"
+          cd "$RUNNER_TEMP/npm-upgrade"
+          npm init -y >/dev/null
+          npm install npm@latest --silent
+          echo "$RUNNER_TEMP/npm-upgrade/node_modules/.bin" >> "$GITHUB_PATH"
+      - run: npm --version
       - run: npm install
       - run: npm run build
       - run: npm publish --access public
