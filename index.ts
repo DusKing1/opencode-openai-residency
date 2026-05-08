@@ -1,7 +1,5 @@
 import type { Plugin } from "@opencode-ai/plugin";
 import * as fs from "node:fs";
-import * as path from "node:path";
-import * as os from "node:os";
 
 // ---------------------------------------------------------------------------
 // gpt-5.5 codex client UA override
@@ -38,16 +36,11 @@ const CODEX_TARGET_FRAGMENTS = [
   "api.openai.com",
 ];
 
-function isUaOverrideEnabled(): boolean {
-  try {
-    const cfgPath = path.join(os.homedir(), ".config/opencode/opencode.json");
-    const raw = fs.readFileSync(cfgPath, "utf8");
-    const cfg = JSON.parse(raw);
-    return cfg?.provider?.openai?.options?.ua_override === true;
-  } catch {
-    return false;
-  }
-}
+// Module-level guard flag. Default OFF preserves opt-in semantics. The flag
+// is flipped on by the chat.headers hook below, which receives opencode's
+// own (jsonc-tolerant, path-resolved) parsed config — so we never have to
+// read the config file ourselves and never have to guess where it lives.
+let uaOverrideEnabled = false;
 
 function debugLog(line: string): void {
   if (!process.env.OPENCODE_RESIDENCY_DEBUG) return;
@@ -86,7 +79,7 @@ function patchFetchForCodex(): void {
       return origFetch(input as RequestInfo | URL, init);
     }
 
-    if (!CODEX_TARGET_FRAGMENTS.some((f) => url.includes(f))) {
+    if (!uaOverrideEnabled || !CODEX_TARGET_FRAGMENTS.some((f) => url.includes(f))) {
       return origFetch(input as RequestInfo | URL, init);
     }
 
@@ -111,12 +104,11 @@ function patchFetchForCodex(): void {
   }) as typeof fetch;
 }
 
-// Module-scope side effect: must execute before any AI SDK fetch fires.
-// The plugin function below runs lazily on first prompt, but module
-// top-level code runs at plugin import — early enough.
-if (isUaOverrideEnabled()) {
-  patchFetchForCodex();
-}
+// Module-scope side effect: install the fetch wrapper unconditionally before
+// any AI SDK fetch fires. While `uaOverrideEnabled` is false (the default)
+// the wrapper short-circuits to origFetch on every call — near-zero overhead.
+// The chat.headers hook flips the flag once it sees opencode's parsed config.
+patchFetchForCodex();
 
 // ---------------------------------------------------------------------------
 // Residency header hook (original behavior)
@@ -125,6 +117,12 @@ if (isUaOverrideEnabled()) {
 export const OpenAIResidencyPlugin: Plugin = async () => ({
   "chat.headers": async (input, output) => {
     if (input.model.providerID !== "openai") return;
+    // Sync flag from opencode-provided, jsonc-parsed, path-resolved config.
+    // This avoids the 1.1.0 bug where reading ~/.config/opencode/opencode.json
+    // ourselves silently failed for: project-local configs, Windows %APPDATA%,
+    // macOS ~/Library/Application Support, XDG_CONFIG_HOME overrides, and
+    // jsonc files (comments/trailing commas tripping JSON.parse).
+    uaOverrideEnabled = input.provider?.options?.ua_override === true;
     const residency = input.provider?.options?.enforce_residency;
     if (residency) {
       output.headers["x-openai-internal-codex-residency"] = String(residency);
