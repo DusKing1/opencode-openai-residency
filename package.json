@@ -1,6 +1,6 @@
 {
   "name": "opencode-openai-residency",
-  "version": "1.1.1",
+  "version": "1.2.0",
   "description": "OpenCode plugin: adds x-openai-internal-codex-residency header for OpenAI Enterprise data residency support",
   "type": "module",
   "main": "./dist/index.js",
